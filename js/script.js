@@ -7,7 +7,6 @@
   const CLOSE_HOUR = 20;
   const SLOT_MINUTES = 30;
   const STORAGE_KEY = 'ivanbeccaria_appointments';
-  const MAX_DAYS_AHEAD = 60;
 
   /* ---------------- Header scroll state ---------------- */
   const header = document.getElementById('siteHeader');
@@ -59,10 +58,24 @@
     return `${y}-${m}-${d}`;
   }
 
-  function maxISO() {
-    const d = new Date();
-    d.setDate(d.getDate() + MAX_DAYS_AHEAD);
-    return toISO(d);
+  function nextDateForWeekday(dayNum) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const lastSlotStart = CLOSE_HOUR * 60 - SLOT_MINUTES;
+
+    let diff = (dayNum - now.getDay() + 7) % 7;
+    if (diff === 0 && currentMinutes >= lastSlotStart) {
+      diff = 7;
+    }
+
+    const target = new Date(now);
+    target.setDate(now.getDate() + diff);
+    target.setHours(0, 0, 0, 0);
+    return toISO(target);
+  }
+
+  function formatShortDate(dateISO) {
+    return parseLocalDate(dateISO).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   }
 
   function buildTimeSlots() {
@@ -99,6 +112,8 @@
   /* ---------------- Booking: DOM refs ---------------- */
   const form = document.getElementById('bookingForm');
   const fechaInput = document.getElementById('fecha');
+  const daySelector = document.getElementById('daySelector');
+  const dayCards = daySelector ? Array.from(daySelector.querySelectorAll('.day-card')) : [];
   const slotsContainer = document.getElementById('slotsContainer');
   const nombreInput = document.getElementById('nombre');
   const apellidoInput = document.getElementById('apellido');
@@ -116,9 +131,6 @@
 
   let selectedTime = null;
 
-  fechaInput.min = todayISO();
-  fechaInput.max = maxISO();
-
   function clearError(field) {
     if (errors[field]) errors[field].textContent = '';
   }
@@ -134,7 +146,7 @@
     slotsContainer.innerHTML = '';
 
     if (!dateISO) {
-      slotsContainer.innerHTML = '<p class="slots-placeholder">Elegí una fecha (martes a viernes) para ver los horarios.</p>';
+      slotsContainer.innerHTML = '<p class="slots-placeholder">Elegí un día para ver los horarios disponibles.</p>';
       return;
     }
 
@@ -174,26 +186,29 @@
 
       slotsContainer.appendChild(btn);
     });
+
+    slotsContainer.classList.remove('slots-anim');
+    void slotsContainer.offsetWidth;
+    slotsContainer.classList.add('slots-anim');
   }
 
-  fechaInput.addEventListener('change', () => {
-    clearError('fecha');
-    clearError('hora');
-    fechaInput.classList.remove('is-invalid');
+  dayCards.forEach((card) => {
+    const dayNum = Number(card.dataset.day);
+    const dateISO = nextDateForWeekday(dayNum);
+    const dateLabel = card.querySelector('.day-date');
+    if (dateLabel) dateLabel.textContent = formatShortDate(dateISO);
 
-    if (!fechaInput.value) {
-      renderSlots(null);
-      return;
-    }
+    card.addEventListener('click', () => {
+      dayCards.forEach((c) => c.classList.remove('is-selected'));
+      card.classList.add('is-selected');
 
-    const day = parseLocalDate(fechaInput.value).getDay();
-    if (!ALLOWED_DAYS.includes(day)) {
-      setError('fecha', 'Solo atendemos de martes a viernes.', fechaInput);
-      renderSlots(null);
-      return;
-    }
+      fechaInput.value = dateISO;
+      daySelector.classList.remove('is-invalid');
+      clearError('fecha');
+      clearError('hora');
 
-    renderSlots(fechaInput.value);
+      renderSlots(dateISO);
+    });
   });
 
   /* ---------------- Field validation ---------------- */
@@ -212,13 +227,14 @@
     let valid = true;
 
     Object.values(errors).forEach((el) => (el.textContent = ''));
-    [fechaInput, nombreInput, apellidoInput, telefonoInput].forEach((el) => el.classList.remove('is-invalid'));
+    [nombreInput, apellidoInput, telefonoInput].forEach((el) => el.classList.remove('is-invalid'));
+    daySelector.classList.remove('is-invalid');
 
     if (!fechaInput.value) {
-      setError('fecha', 'Elegí una fecha.', fechaInput);
+      setError('fecha', 'Elegí un día.', daySelector);
       valid = false;
     } else if (!ALLOWED_DAYS.includes(parseLocalDate(fechaInput.value).getDay())) {
-      setError('fecha', 'Solo atendemos de martes a viernes.', fechaInput);
+      setError('fecha', 'Solo atendemos de martes a viernes.', daySelector);
       valid = false;
     }
 

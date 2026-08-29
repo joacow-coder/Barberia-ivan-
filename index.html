@@ -69,16 +69,34 @@
         <form id="bookingForm" class="booking-card reveal" novalidate>
           <div class="booking-grid">
 
-            <div class="field-group">
-              <label for="fecha">Fecha</label>
-              <input type="date" id="fecha" name="fecha" required autocomplete="off" />
+            <div class="field-group field-group--wide">
+              <label>Día</label>
+              <div id="daySelector" class="day-selector-grid">
+                <button type="button" class="day-card" data-day="2">
+                  <span class="day-name">Martes</span>
+                  <span class="day-date" data-day-date="2"></span>
+                </button>
+                <button type="button" class="day-card" data-day="3">
+                  <span class="day-name">Miércoles</span>
+                  <span class="day-date" data-day-date="3"></span>
+                </button>
+                <button type="button" class="day-card" data-day="4">
+                  <span class="day-name">Jueves</span>
+                  <span class="day-date" data-day-date="4"></span>
+                </button>
+                <button type="button" class="day-card" data-day="5">
+                  <span class="day-name">Viernes</span>
+                  <span class="day-date" data-day-date="5"></span>
+                </button>
+              </div>
+              <input type="hidden" id="fecha" name="fecha" />
               <p class="field-error" id="fechaError" role="alert"></p>
             </div>
 
             <div class="field-group field-group--wide">
               <label>Horario disponible</label>
               <div id="slotsContainer" class="slots-grid">
-                <p class="slots-placeholder">Elegí una fecha (martes a viernes) para ver los horarios.</p>
+                <p class="slots-placeholder">Elegí un día para ver los horarios disponibles.</p>
               </div>
               <p class="field-error" id="horaError" role="alert"></p>
             </div>

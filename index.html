@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iván Beccaria | Barbería</title>
+  <meta name="description" content="Iván Beccaria — Barbería. Cortes con estilo, agenda tu turno online de martes a viernes." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="#top" class="brand">IVÁN <span class="brand-accent">BECCARIA</span></a>
+      <nav class="main-nav">
+        <a href="#turnos" class="btn btn-primary btn-sm">Reservar turno</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="top">
+      <div class="hero-media">
+        <img
+          src="assets/img/barbero-principal.png"
+          alt="Iván Beccaria, barbero, retrato profesional"
+          class="hero-img"
+          id="heroImg"
+        />
+        <div class="hero-overlay"></div>
+        <div class="hero-tag hero-tag--one" aria-hidden="true">FADE</div>
+        <div class="hero-tag hero-tag--two" aria-hidden="true">STYLE</div>
+      </div>
+
+      <div class="container hero-content">
+        <p class="eyebrow reveal">Barbería &middot; Buenos Aires</p>
+        <h1 class="hero-title">
+          <span class="reveal reveal-delay-1">IVÁN</span>
+          <span class="reveal reveal-delay-2 spray-text">BECCARIA</span>
+        </h1>
+        <p class="hero-subtitle reveal reveal-delay-3">
+          Cortes con actitud, técnica de barbero y estilo urbano. Tu imagen, hecha arte.
+        </p>
+        <a href="#turnos" class="btn btn-primary btn-lg reveal reveal-delay-4">Reservar turno</a>
+      </div>
+
+      <a href="#turnos" class="scroll-indicator" aria-label="Desplazarse hacia la sección de turnos">
+        <span class="scroll-indicator-text">DESLIZÁ</span>
+        <span class="scroll-mouse"><span class="scroll-dot"></span></span>
+      </a>
+    </section>
+
+    <!-- TURNOS -->
+    <section class="booking" id="turnos">
+      <div class="container">
+        <p class="eyebrow reveal">Agenda</p>
+        <h2 class="section-title reveal">Reservá tu <span class="spray-text">turno</span></h2>
+        <p class="section-subtitle reveal">
+          Atendemos de <strong>martes a viernes</strong>, de <strong>14:00 a 20:00 hs</strong>,
+          en turnos de 30 minutos.
+        </p>
+
+        <form id="bookingForm" class="booking-card reveal" novalidate>
+          <div class="booking-grid">
+
+            <div class="field-group">
+              <label for="fecha">Fecha</label>
+              <input type="date" id="fecha" name="fecha" required autocomplete="off" />
+              <p class="field-error" id="fechaError" role="alert"></p>
+            </div>
+
+            <div class="field-group field-group--wide">
+              <label>Horario disponible</label>
+              <div id="slotsContainer" class="slots-grid">
+                <p class="slots-placeholder">Elegí una fecha (martes a viernes) para ver los horarios.</p>
+              </div>
+              <p class="field-error" id="horaError" role="alert"></p>
+            </div>
+
+            <div class="field-group">
+              <label for="nombre">Nombre</label>
+              <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required autocomplete="given-name" />
+              <p class="field-error" id="nombreError" role="alert"></p>
+            </div>
+
+            <div class="field-group">
+              <label for="apellido">Apellido</label>
+              <input type="text" id="apellido" name="apellido" placeholder="Tu apellido" required autocomplete="family-name" />
+              <p class="field-error" id="apellidoError" role="alert"></p>
+            </div>
+
+            <div class="field-group field-group--wide">
+              <label for="telefono">Teléfono (WhatsApp)</label>
+              <input type="tel" id="telefono" name="telefono" placeholder="Ej: 11 2345 6789" required autocomplete="tel" />
+              <p class="field-error" id="telefonoError" role="alert"></p>
+            </div>
+
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-submit" id="submitBtn">
+            <span class="btn-label">Confirmar turno</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+
+          <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="brand brand-footer">IVÁN <span class="brand-accent">BECCARIA</span></p>
+      <p class="footer-text">Martes a viernes &middot; 14:00 - 20:00 hs</p>
+      <p class="footer-copy">&copy; <span id="year"></span> Iván Beccaria Barbería. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

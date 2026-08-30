@@ -2,6 +2,7 @@
   'use strict';
 
   const client = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
+  const ADMIN_EMAIL = 'admin@barberia.com';
 
   const configWarning = document.getElementById('configWarning');
   if (!client && configWarning) configWarning.hidden = false;
@@ -11,7 +12,6 @@
   const adminPanel = document.getElementById('adminPanel');
   const logoutBtn = document.getElementById('logoutBtn');
   const loginForm = document.getElementById('loginForm');
-  const loginEmail = document.getElementById('loginEmail');
   const loginPassword = document.getElementById('loginPassword');
   const loginStatus = document.getElementById('loginStatus');
   const loginSubmitBtn = document.getElementById('loginSubmitBtn');
@@ -61,7 +61,7 @@
       loginStatus.textContent = '';
 
       const { error } = await client.auth.signInWithPassword({
-        email: loginEmail.value.trim(),
+        email: ADMIN_EMAIL,
         password: loginPassword.value,
       });
 
@@ -69,7 +69,7 @@
 
       if (error) {
         loginStatus.className = 'form-status error';
-        loginStatus.textContent = 'Email o contraseña incorrectos.';
+        loginStatus.textContent = 'Contraseña incorrecta.';
         return;
       }
 

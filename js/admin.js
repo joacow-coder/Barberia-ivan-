@@ -3,6 +3,7 @@
 
   const client = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
   const ADMIN_EMAIL = 'admin@barberia.com';
+  const STORAGE_BUCKET = 'barberia_galeria';
 
   const configWarning = document.getElementById('configWarning');
   if (!client && configWarning) configWarning.hidden = false;
@@ -27,7 +28,7 @@
     showPanel(isAuthenticated);
 
     if (isAuthenticated) {
-      await Promise.all([loadTurnos(), loadConfiguracion(), loadGaleria()]);
+      await Promise.all([loadTurnos(), loadConfiguracion(), loadGaleria(), loadAntesDespues()]);
     }
   }
 
@@ -356,6 +357,152 @@
     }
 
     await loadGaleria();
+  }
+
+  /* ---------------- Antes y Después ---------------- */
+  const baForm = document.getElementById('baForm');
+  const baAntesInput = document.getElementById('baAntes');
+  const baDespuesInput = document.getElementById('baDespues');
+  const baTitulo = document.getElementById('baTitulo');
+  const baStatus = document.getElementById('baStatus');
+  const baSubmitBtn = document.getElementById('baSubmitBtn');
+  const baList = document.getElementById('baList');
+
+  function renderBaMessage(message) {
+    baList.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'gallery-placeholder';
+    p.textContent = message;
+    baList.appendChild(p);
+  }
+
+  async function subirImagen(file, prefix) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `antes-despues/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const { error } = await client.storage.from(STORAGE_BUCKET).upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+    if (error) throw error;
+
+    const { data } = client.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  async function loadAntesDespues() {
+    if (!client) {
+      renderBaMessage('Supabase no configurado.');
+      return;
+    }
+
+    renderBaMessage('Cargando…');
+
+    const { data, error } = await client.from('antes_despues').select('*').order('id', { ascending: false });
+
+    if (error) {
+      console.error(error);
+      renderBaMessage('No se pudo cargar.');
+      return;
+    }
+
+    if (!data || !data.length) {
+      renderBaMessage('Todavía no hay comparaciones.');
+      return;
+    }
+
+    baList.innerHTML = '';
+    data.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'admin-ba-card';
+
+      const imgs = document.createElement('div');
+      imgs.className = 'admin-ba-imgs';
+      imgs.appendChild(Object.assign(document.createElement('img'), { src: item.url_antes, alt: 'Antes' }));
+      imgs.appendChild(Object.assign(document.createElement('img'), { src: item.url_despues, alt: 'Después' }));
+
+      const info = document.createElement('div');
+      info.className = 'admin-gallery-info';
+      const titleEl = document.createElement('strong');
+      titleEl.textContent = item.titulo || '(sin título)';
+      info.appendChild(titleEl);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'btn btn-sm admin-cancel-btn';
+      deleteBtn.textContent = 'Eliminar';
+      deleteBtn.addEventListener('click', () => eliminarAntesDespues(item.id, deleteBtn));
+
+      card.appendChild(imgs);
+      card.appendChild(info);
+      card.appendChild(deleteBtn);
+      baList.appendChild(card);
+    });
+  }
+
+  if (baForm) {
+    baForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!client) return;
+
+      const antesFile = baAntesInput.files[0];
+      const despuesFile = baDespuesInput.files[0];
+
+      if (!antesFile || !despuesFile) {
+        baStatus.className = 'form-status error';
+        baStatus.textContent = 'Subí las dos fotos (antes y después).';
+        return;
+      }
+
+      baSubmitBtn.disabled = true;
+      baStatus.className = 'form-status';
+      baStatus.textContent = 'Subiendo imágenes…';
+
+      try {
+        const [urlAntes, urlDespues] = await Promise.all([
+          subirImagen(antesFile, 'antes'),
+          subirImagen(despuesFile, 'despues'),
+        ]);
+
+        const { error } = await client.from('antes_despues').insert([{
+          url_antes: urlAntes,
+          url_despues: urlDespues,
+          titulo: baTitulo.value.trim(),
+        }]);
+
+        if (error) throw error;
+
+        baStatus.className = 'form-status success';
+        baStatus.textContent = 'Comparación agregada.';
+        baForm.reset();
+        await loadAntesDespues();
+      } catch (err) {
+        console.error(err);
+        baStatus.className = 'form-status error';
+        baStatus.textContent = 'No se pudo guardar la comparación.';
+      } finally {
+        baSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  async function eliminarAntesDespues(id, btn) {
+    if (!confirm('¿Eliminar esta comparación?')) return;
+
+    btn.disabled = true;
+
+    const { error } = await client.from('antes_despues').delete().eq('id', id);
+
+    if (error) {
+      console.error(error);
+      baStatus.className = 'form-status error';
+      baStatus.textContent = 'No se pudo eliminar.';
+      btn.disabled = false;
+      return;
+    }
+
+    await loadAntesDespues();
   }
 
   /* ---------------- Init ---------------- */

@@ -123,6 +123,32 @@
         </div>
       </section>
 
+      <section class="admin-section">
+        <h2 class="section-title">Gestión de Antes y Después</h2>
+        <p class="section-subtitle">Subí dos fotos (antes y después) del mismo corte para mostrarlas con el efecto interactivo en la web.</p>
+
+        <form id="baForm" class="admin-card">
+          <div class="field-group">
+            <label for="baAntes">Foto "Antes"</label>
+            <input type="file" id="baAntes" name="antes" accept="image/*" required />
+          </div>
+          <div class="field-group">
+            <label for="baDespues">Foto "Después"</label>
+            <input type="file" id="baDespues" name="despues" accept="image/*" required />
+          </div>
+          <div class="field-group">
+            <label for="baTitulo">Título / descripción</label>
+            <input type="text" id="baTitulo" name="titulo" placeholder="Degradado con textura" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" id="baSubmitBtn">Guardar comparación</button>
+          <div class="form-status" id="baStatus" role="status" aria-live="polite"></div>
+        </form>
+
+        <div id="baList" class="admin-gallery-list">
+          <p class="gallery-placeholder">Cargando…</p>
+        </div>
+      </section>
+
       </div>
 
     </div>

@@ -83,6 +83,14 @@ create table galeria (
   titulo text,
   created_at timestamptz default now()
 );
+
+create table antes_despues (
+  id bigint generated always as identity primary key,
+  url_antes text not null,
+  url_despues text not null,
+  titulo text,
+  created_at timestamptz default now()
+);
 ```
 
 > **Nota sobre el esquema:** el pedido original de `turnos` era `(id, cliente_nombre, fecha, hora)`. Se agregaron `cliente_apellido` y `cliente_telefono` porque el formulario los captura y son imprescindibles para que el barbero pueda contactar al cliente — sin el teléfono, un turno reservado es inútil para el negocio. También se agregó `unique (fecha, hora)` para que la base de datos rechace turnos duplicados aunque dos personas confirmen al mismo tiempo.
@@ -96,17 +104,19 @@ const SUPABASE_ANON_KEY = 'tu-anon-key-publica';
 
 4. **Seguridad — Row Level Security (RLS):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de RLS. Con `admin.html` protegido por Supabase Auth (login con email/contraseña):
    - `turnos` permite SELECT e INSERT públicos (los clientes reservan sin cuenta), pero UPDATE/DELETE solo para usuarios autenticados.
-   - `configuracion` y `galeria` solo permiten SELECT público; INSERT, UPDATE y DELETE quedan restringidos a usuarios autenticados, ya que esos cambios los hace únicamente el admin logueado desde `admin.html`.
+   - `configuracion`, `galeria` y `antes_despues` solo permiten SELECT público; INSERT, UPDATE y DELETE quedan restringidos a usuarios autenticados, ya que esos cambios los hace únicamente el admin logueado desde `admin.html`.
 
 ```sql
 alter table turnos enable row level security;
 alter table configuracion enable row level security;
 alter table galeria enable row level security;
+alter table antes_despues enable row level security;
 
--- SELECT público en las tres tablas (el sitio y la galería lo necesitan sin login)
+-- SELECT público en las cuatro tablas (el sitio, la galería y las comparaciones lo necesitan sin login)
 create policy "select publico turnos" on turnos for select using (true);
 create policy "select publico configuracion" on configuracion for select using (true);
 create policy "select publico galeria" on galeria for select using (true);
+create policy "select publico antes_despues" on antes_despues for select using (true);
 
 -- INSERT público solo en turnos (para que cualquiera pueda reservar sin cuenta)
 create policy "insert publico turnos" on turnos for insert with check (true);
@@ -124,19 +134,43 @@ create policy "delete autenticado configuracion" on configuracion for delete usi
 create policy "insert autenticado galeria" on galeria for insert with check (auth.role() = 'authenticated');
 create policy "update autenticado galeria" on galeria for update using (auth.role() = 'authenticated');
 create policy "delete autenticado galeria" on galeria for delete using (auth.role() = 'authenticated');
+
+-- antes_despues: INSERT / UPDATE / DELETE solo para usuarios autenticados
+create policy "insert autenticado antes_despues" on antes_despues for insert with check (auth.role() = 'authenticated');
+create policy "update autenticado antes_despues" on antes_despues for update using (auth.role() = 'authenticated');
+create policy "delete autenticado antes_despues" on antes_despues for delete using (auth.role() = 'authenticated');
 ```
 
-Con esto, nadie puede insertar, editar ni borrar filas de `configuracion` o `galeria` sin estar logueado — ni siquiera llamando a la API de Supabase directamente con la anon key. Esas acciones solo van a funcionar desde `admin.html` con una sesión activa.
+Con esto, nadie puede insertar, editar ni borrar filas de `configuracion`, `galeria` o `antes_despues` sin estar logueado — ni siquiera llamando a la API de Supabase directamente con la anon key. Esas acciones solo van a funcionar desde `admin.html` con una sesión activa.
 
 5. Creá el usuario admin en **Authentication → Users → Add user** (email + contraseña) para poder loguearte en `admin.html`. No hay registro público: los usuarios se crean a mano desde el dashboard de Supabase.
 
+6. **Storage — bucket para las fotos de "Antes y Después":**
+   - En **Storage → New bucket**, creá uno llamado exactamente `barberia_galeria` y marcalo como **público** (así las imágenes se pueden mostrar en la web sin login, vía URL pública).
+   - Al ser público, la lectura (descarga) funciona automáticamente sin necesitar una policy de `select`. Pero **subir y borrar archivos sí requiere policies** en `storage.objects`, independientemente de que el bucket sea público — corré esto en el SQL Editor:
+
+```sql
+create policy "subida autenticada barberia_galeria"
+on storage.objects for insert
+with check (bucket_id = 'barberia_galeria' and auth.role() = 'authenticated');
+
+create policy "borrado autenticado barberia_galeria"
+on storage.objects for delete
+using (bucket_id = 'barberia_galeria' and auth.role() = 'authenticated');
+```
+
+Con esto, solo el admin logueado puede subir o borrar archivos del bucket; cualquiera puede verlos vía la URL pública que genera `getPublicUrl()`.
+
+> **Nota:** a diferencia de `galeria` (donde cargás una URL externa a mano), `antes_despues` sube los archivos directamente al Storage de Supabase desde `admin.html` y guarda la URL pública resultante. Al día de hoy, borrar una fila de `antes_despues` desde el panel **no borra el archivo del bucket** (solo la referencia en la tabla) — quedaría como una mejora pendiente si te interesa liberar espacio de Storage automáticamente.
+
 ## Panel de administración (`admin.html`)
 
-- **Login con Supabase Auth** (email + contraseña, `supabase.auth.signInWithPassword`). Mientras no haya sesión activa, el panel permanece oculto y solo se ve el formulario de login. Botón "Cerrar sesión" (`supabase.auth.signOut`) visible una vez logueado.
+- **Login con Supabase Auth**, simplificado a solo contraseña (`supabase.auth.signInWithPassword` con el email `admin@barberia.com` hardcodeado en `js/admin.js`). Mientras no haya sesión activa, el panel permanece oculto y solo se ve el formulario de login. Botón "Cerrar sesión" (`supabase.auth.signOut`) visible una vez logueado.
 - Lista los turnos reales desde Supabase, con botón para cancelarlos (`delete`).
 - Formulario para editar `configuracion` (título, descripción, precio del corte) — hace `upsert`.
 - Formulario para agregar contenido a `galeria` (URL, tipo, título) y eliminarlo.
-- La protección real no es la pantalla de login en sí (es solo UI) sino las políticas RLS de arriba: sin `auth.role() = 'authenticated'` en `update`/`delete`, cualquiera podría cancelar turnos o borrar la galería llamando a la API directamente aunque nunca haya visto `admin.html`.
+- Formulario "Gestión de Antes y Después": subís dos archivos de imagen, se cargan al bucket `barberia_galeria` de Supabase Storage, y las URLs públicas resultantes se guardan en `antes_despues`. Incluye listado con botón para eliminar cada comparación.
+- La protección real no es la pantalla de login en sí (es solo UI) sino las políticas RLS de arriba: sin `auth.role() = 'authenticated'` en `update`/`delete`/`insert`, cualquiera podría cancelar turnos, borrar la galería o subir archivos al bucket llamando a la API directamente aunque nunca haya visto `admin.html`.
 
 ## Despliegue
 

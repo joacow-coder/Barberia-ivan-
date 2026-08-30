@@ -113,6 +113,16 @@
     return data || [];
   }
 
+  async function fetchAntesDespues() {
+    if (!client) return [];
+    const { data, error } = await client.from('antes_despues').select('*').order('id', { ascending: true });
+    if (error) {
+      console.error('Error al traer antes/después:', error);
+      return [];
+    }
+    return data || [];
+  }
+
   async function fetchHorasOcupadas(dateISO) {
     if (!client) return [];
     const { data, error } = await client.from('turnos').select('hora').eq('fecha', dateISO);
@@ -199,7 +209,92 @@
     });
   }
 
-  /* ---------------- Init: configuración + galería ---------------- */
+  /* ---------------- Render: antes y después ---------------- */
+  function wireBeforeAfterInteraction(slider) {
+    function setPosFromClientX(clientX) {
+      const rect = slider.getBoundingClientRect();
+      const pct = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+      slider.style.setProperty('--pos', `${pct}%`);
+    }
+
+    slider.addEventListener('pointermove', (e) => setPosFromClientX(e.clientX));
+
+    slider.addEventListener('keydown', (e) => {
+      const current = parseFloat(slider.style.getPropertyValue('--pos')) || 50;
+      if (e.key === 'ArrowLeft') {
+        slider.style.setProperty('--pos', `${Math.max(0, current - 5)}%`);
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight') {
+        slider.style.setProperty('--pos', `${Math.min(100, current + 5)}%`);
+        e.preventDefault();
+      }
+    });
+  }
+
+  function renderAntesDespues(items) {
+    const grid = document.getElementById('beforeAfterGrid');
+    if (!grid) return;
+
+    if (!items.length) {
+      grid.innerHTML = '<p class="gallery-placeholder">Todavía no hay comparaciones cargadas.</p>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    items.forEach((item) => {
+      const slider = document.createElement('div');
+      slider.className = 'ba-slider';
+      slider.style.setProperty('--pos', '50%');
+      slider.tabIndex = 0;
+      slider.setAttribute('role', 'group');
+      slider.setAttribute('aria-label', `Antes y después: ${item.titulo || 'corte de pelo'}`);
+
+      const afterImg = Object.assign(document.createElement('img'), {
+        src: item.url_despues,
+        alt: 'Después',
+        className: 'ba-img ba-after',
+        draggable: false,
+        loading: 'lazy',
+      });
+
+      const beforeImg = Object.assign(document.createElement('img'), {
+        src: item.url_antes,
+        alt: 'Antes',
+        className: 'ba-img ba-before',
+        draggable: false,
+        loading: 'lazy',
+      });
+
+      const handle = document.createElement('div');
+      handle.className = 'ba-handle';
+
+      const tagBefore = document.createElement('span');
+      tagBefore.className = 'ba-tag ba-tag--before';
+      tagBefore.textContent = 'Antes';
+
+      const tagAfter = document.createElement('span');
+      tagAfter.className = 'ba-tag ba-tag--after';
+      tagAfter.textContent = 'Después';
+
+      slider.appendChild(afterImg);
+      slider.appendChild(beforeImg);
+      slider.appendChild(handle);
+      slider.appendChild(tagBefore);
+      slider.appendChild(tagAfter);
+
+      if (item.titulo) {
+        const caption = document.createElement('p');
+        caption.className = 'ba-caption';
+        caption.textContent = item.titulo;
+        slider.appendChild(caption);
+      }
+
+      wireBeforeAfterInteraction(slider);
+      grid.appendChild(slider);
+    });
+  }
+
+  /* ---------------- Init: configuración + galería + antes/después ---------------- */
   async function initContent() {
     setPageLoading(true);
 
@@ -210,8 +305,13 @@
     }
 
     try {
-      const [config, galeria] = await Promise.all([fetchConfiguracion(), fetchGaleria()]);
+      const [config, galeria, antesDespues] = await Promise.all([
+        fetchConfiguracion(),
+        fetchGaleria(),
+        fetchAntesDespues(),
+      ]);
       applyConfiguracion(config);
+      renderAntesDespues(antesDespues);
       renderGaleria(galeria);
     } catch (err) {
       console.error(err);

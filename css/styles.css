@@ -526,6 +526,122 @@ button {
   background: linear-gradient(0deg, rgba(6, 11, 26, 0.9), transparent);
 }
 
+/* ---------- Antes y Después ---------- */
+
+.before-after {
+  padding-block: 100px;
+  background: var(--navy-950);
+}
+
+.ba-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 380px) {
+  .ba-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+}
+
+.ba-slider {
+  --pos: 50%;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(242, 169, 59, 0.14);
+  background: var(--navy-900);
+  cursor: ew-resize;
+  touch-action: pan-y;
+}
+
+.ba-slider:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.ba-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.ba-before {
+  clip-path: inset(0 calc(100% - var(--pos)) 0 0);
+}
+
+.ba-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--pos);
+  width: 3px;
+  background: var(--gold);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ba-handle::after {
+  content: '⟷';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--navy-950);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.ba-tag {
+  position: absolute;
+  top: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(6, 11, 26, 0.75);
+  color: var(--paper);
+  pointer-events: none;
+}
+
+.ba-tag--before {
+  left: 12px;
+}
+
+.ba-tag--after {
+  right: 12px;
+}
+
+.ba-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: linear-gradient(0deg, rgba(6, 11, 26, 0.9), transparent);
+  pointer-events: none;
+}
+
 .price-badge {
   display: inline-block;
   margin-bottom: 24px;
@@ -984,6 +1100,62 @@ button {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 4px rgba(242, 169, 59, 0.15);
+}
+
+.field-group input[type="file"] {
+  background: var(--navy-950);
+  border: 1.5px dashed var(--navy-600);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+}
+
+.field-group input[type="file"]::file-selector-button {
+  background: var(--gold);
+  color: var(--navy-950);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  margin-right: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.field-group input[type="file"]::file-selector-button:hover {
+  background: var(--gold-light);
+}
+
+.admin-ba-card {
+  background: var(--navy-900);
+  border: 1px solid rgba(242, 169, 59, 0.14);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-ba-imgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.admin-ba-imgs img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.admin-ba-card .admin-gallery-info {
+  padding: 10px 14px;
+}
+
+.admin-ba-card .admin-cancel-btn {
+  margin: 0 14px 14px;
+  align-self: flex-start;
 }
 
 .admin-gallery-list {

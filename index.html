@@ -11,8 +11,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/styles.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
 </head>
 <body>
+
+  <div class="page-loader" id="pageLoader">
+    <div class="page-loader-spinner"></div>
+    <p>Cargando…</p>
+  </div>
+
+  <div class="config-warning" id="configWarning" role="alert" hidden>
+    ⚠️ Supabase no está configurado todavía. Completá <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en <code>js/supabase-config.js</code>.
+  </div>
 
   <header class="site-header" id="siteHeader">
     <div class="container header-inner">
@@ -56,6 +68,18 @@
       </a>
     </section>
 
+    <!-- GALERÍA -->
+    <section class="gallery" id="galeria">
+      <div class="container">
+        <p class="eyebrow reveal">Portfolio</p>
+        <h2 class="section-title reveal">Nuestros <span class="spray-text">trabajos</span></h2>
+        <p class="section-subtitle reveal">Una selección de cortes y estilos hechos en el estudio.</p>
+        <div id="galleryGrid" class="gallery-grid">
+          <p class="gallery-placeholder">Cargando galería…</p>
+        </div>
+      </div>
+    </section>
+
     <!-- TURNOS -->
     <section class="booking" id="turnos">
       <div class="container">
@@ -65,6 +89,7 @@
           Atendemos de <strong>martes a viernes</strong>, de <strong>14:00 a 20:00 hs</strong>,
           en turnos de 30 minutos.
         </p>
+        <p class="price-badge" id="precioCorte" hidden></p>
 
         <form id="bookingForm" class="booking-card reveal" novalidate>
           <div class="booking-grid">

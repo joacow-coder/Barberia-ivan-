@@ -13,10 +13,13 @@ HTML5, CSS3 (variables nativas, sin frameworks) y JavaScript vanilla. Sin depend
 ```
 Barberia-Ivan/
 ├── index.html
+├── admin.html                      ← panel de administración
 ├── css/
 │   └── styles.css
 ├── js/
-│   └── script.js
+│   ├── supabase-config.js          ← completar SUPABASE_URL / SUPABASE_ANON_KEY
+│   ├── script.js                   ← lógica del sitio público
+│   └── admin.js                    ← lógica del panel admin
 ├── assets/
 │   └── img/
 │       └── barbero-principal.png   ← colocar aquí la foto del barbero
@@ -43,19 +46,80 @@ Colocá el archivo `barbero-principal.png` (horizontal, barbero a la izquierda, 
 
 ## Sistema de turnos
 
-- Días habilitados: **martes a viernes**.
+- Días habilitados: **martes a viernes**, elegidos con tarjetas visuales (no un calendario clásico).
 - Horario: **14:00 a 20:00 hs**, en bloques de **30 minutos**.
-- Al elegir una fecha válida se generan los horarios disponibles; los turnos ya reservados aparecen deshabilitados y tachados, y los horarios pasados del día actual también se bloquean.
+- Al elegir un día se resuelve la fecha real (próxima ocurrencia de ese día de semana) y se consultan a Supabase los horarios ya ocupados; los turnos reservados aparecen deshabilitados y tachados, y los horarios pasados del día actual también se bloquean.
 - El formulario valida nombre, apellido, teléfono y horario seleccionado antes de confirmar, mostrando errores inline y una animación de estado (éxito o error).
-- **Persistencia:** en esta versión los turnos se guardan en `localStorage` del navegador (no hay backend). Esto permite una demo totalmente funcional sin servidor, pero significa que los turnos no se comparten entre dispositivos ni se ven desde un panel de administración.
+- **Persistencia:** los turnos, la configuración del sitio y la galería viven en **Supabase** (Postgres + API). No hay `localStorage` en el proyecto.
 
-### Próximos pasos sugeridos para producción
+## Configuración de Supabase
 
-Para que los turnos queden centralizados (visibles desde cualquier dispositivo, con notificación a Iván), se recomienda conectar el formulario a un backend real, por ejemplo:
-- Un endpoint propio (Node/Express, o funciones serverless) con una base de datos (PostgreSQL, SQLite, Firebase, Supabase).
-- Un servicio de formularios (Netlify Forms, Formspree) combinado con una integración de calendario (Google Calendar API) si no se necesita lógica custom.
+1. Creá un proyecto en [supabase.com](https://supabase.com).
+2. Corré este SQL en el **SQL Editor** de Supabase para crear las tablas:
 
-El JavaScript actual (`js/script.js`) está aislado en funciones puras (`buildTimeSlots`, `getAppointments`, `saveAppointment`, `isSlotTaken`) para que reemplazar `localStorage` por llamadas `fetch` a una API sea un cambio acotado.
+```sql
+create table turnos (
+  id bigint generated always as identity primary key,
+  cliente_nombre text not null,
+  cliente_apellido text not null,
+  cliente_telefono text not null,
+  fecha date not null,
+  hora text not null,
+  created_at timestamptz default now(),
+  unique (fecha, hora)
+);
+
+create table configuracion (
+  id bigint generated always as identity primary key,
+  titulo text,
+  descripcion text,
+  precio_corte numeric
+);
+
+create table galeria (
+  id bigint generated always as identity primary key,
+  url_archivo text not null,
+  tipo text not null default 'imagen',
+  titulo text,
+  created_at timestamptz default now()
+);
+```
+
+> **Nota sobre el esquema:** el pedido original de `turnos` era `(id, cliente_nombre, fecha, hora)`. Se agregaron `cliente_apellido` y `cliente_telefono` porque el formulario los captura y son imprescindibles para que el barbero pueda contactar al cliente — sin el teléfono, un turno reservado es inútil para el negocio. También se agregó `unique (fecha, hora)` para que la base de datos rechace turnos duplicados aunque dos personas confirmen al mismo tiempo.
+
+3. Completá `js/supabase-config.js` con los valores de **Project Settings → API**:
+
+```js
+const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+const SUPABASE_ANON_KEY = 'tu-anon-key-publica';
+```
+
+4. **Seguridad (importante):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de **Row Level Security (RLS)**. Sin RLS, cualquier visitante (o el propio `admin.html`, que no tiene login) puede leer y escribir todas las tablas. Como mínimo:
+
+```sql
+alter table turnos enable row level security;
+alter table configuracion enable row level security;
+alter table galeria enable row level security;
+
+-- Lectura pública (necesaria para el sitio y la galería)
+create policy "lectura publica turnos" on turnos for select using (true);
+create policy "lectura publica configuracion" on configuracion for select using (true);
+create policy "lectura publica galeria" on galeria for select using (true);
+
+-- Cualquiera puede reservar un turno (insert), pero no editar/borrar turnos ajenos
+create policy "insertar turno publico" on turnos for insert with check (true);
+```
+
+Con esas policies, cualquier visitante puede **crear** turnos (como debe ser) pero **no** puede cancelarlos ni tocar `configuracion`/`galeria` desde la consola del navegador. Eso significa que, tal cual está hoy, **`admin.html` no podrá cancelar turnos, guardar configuración ni gestionar la galería sin agregar autenticación** (Supabase Auth) y políticas que exijan un usuario logueado para esas operaciones. Si querés, se puede sumar un login simple de Supabase Auth para destrabar esto — no se implementó porque no fue parte de este pedido.
+
+## Panel de administración (`admin.html`)
+
+- Lista los turnos reales desde Supabase, con botón para cancelarlos (`delete`).
+- Formulario para editar `configuracion` (título, descripción, precio del corte) — hace `upsert`.
+- Formulario para agregar contenido a `galeria` (URL, tipo, título) y eliminarlo.
+- **No tiene login.** Es una página estática más del sitio; cualquiera con la URL puede abrirla. Sumale al menos una de estas capas antes de usarlo en producción:
+  - Supabase Auth (email/password o magic link) + políticas RLS que exijan `auth.uid()`.
+  - Restringir el acceso a `/admin.html` a nivel de hosting (ej. Basic Auth en Netlify/Vercel).
 
 ## Despliegue
 

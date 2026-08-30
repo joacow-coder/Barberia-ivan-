@@ -219,6 +219,60 @@ button {
 .reveal-delay-3.is-visible { transition-delay: 260ms; }
 .reveal-delay-4.is-visible { transition-delay: 360ms; }
 
+/* ---------- Page loader / config warning ---------- */
+
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--navy-950);
+  color: var(--muted);
+  transition: opacity var(--transition-med), visibility var(--transition-med);
+}
+
+.page-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.page-loader-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(242, 169, 59, 0.25);
+  border-top-color: var(--gold);
+  animation: spin 0.8s linear infinite;
+}
+
+.config-warning {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  max-width: 92%;
+  background: var(--navy-800);
+  border: 1px solid var(--terracota);
+  color: var(--paper);
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.config-warning code {
+  background: rgba(242, 169, 59, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.82em;
+}
+
 /* ---------- Header ---------- */
 
 .site-header {
@@ -410,6 +464,69 @@ button {
   0% { transform: translateY(0); opacity: 1; }
   70% { transform: translateY(10px); opacity: 0; }
   100% { transform: translateY(0); opacity: 0; }
+}
+
+/* ---------- Gallery ---------- */
+
+.gallery {
+  padding-block: 100px;
+  background: var(--navy-950);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.gallery-placeholder {
+  color: var(--muted);
+  grid-column: 1 / -1;
+}
+
+.gallery-item {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(242, 169, 59, 0.14);
+  background: var(--navy-900);
+  aspect-ratio: 4 / 5;
+}
+
+.gallery-item img,
+.gallery-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-med);
+}
+
+.gallery-item:hover img,
+.gallery-item:hover video {
+  transform: scale(1.05);
+}
+
+.gallery-item figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: linear-gradient(0deg, rgba(6, 11, 26, 0.9), transparent);
+}
+
+.price-badge {
+  display: inline-block;
+  margin-bottom: 24px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(242, 169, 59, 0.12);
+  border: 1px solid rgba(242, 169, 59, 0.35);
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 /* ---------- Booking ---------- */
@@ -667,6 +784,170 @@ button {
   color: rgba(169, 179, 207, 0.6);
   font-size: 0.78rem;
   margin-top: 12px;
+}
+
+/* ---------- Admin ---------- */
+
+.admin-body {
+  padding-top: 90px;
+}
+
+.admin-main {
+  padding-block: 40px 100px;
+}
+
+.admin-tag {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-section {
+  margin-bottom: 64px;
+}
+
+.admin-status {
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(242, 169, 59, 0.14);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--navy-700);
+  font-size: 0.9rem;
+}
+
+.admin-table th {
+  background: var(--navy-800);
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(242, 169, 59, 0.05);
+}
+
+.admin-cancel-btn {
+  background: transparent;
+  border: 1.5px solid var(--terracota);
+  color: var(--terracota);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.admin-cancel-btn:hover:not(:disabled) {
+  background: var(--terracota);
+  color: var(--paper);
+}
+
+.admin-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-card {
+  background: linear-gradient(165deg, var(--navy-800), var(--navy-900));
+  border: 1px solid rgba(242, 169, 59, 0.14);
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.admin-card--row {
+  max-width: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.admin-card--row .field-group {
+  flex: 1 1 180px;
+}
+
+.field-group textarea,
+.field-group select {
+  background: var(--navy-950);
+  border: 1.5px solid var(--navy-600);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: var(--paper);
+  font-size: 1rem;
+  font-family: var(--font-body);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  resize: vertical;
+}
+
+.field-group textarea:focus,
+.field-group select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(242, 169, 59, 0.15);
+}
+
+.admin-gallery-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.admin-gallery-card {
+  background: var(--navy-900);
+  border: 1px solid rgba(242, 169, 59, 0.14);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-gallery-card img,
+.admin-gallery-card video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.admin-gallery-info {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-gallery-info span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.admin-gallery-card .admin-cancel-btn {
+  margin: 0 14px 14px;
+  align-self: flex-start;
 }
 
 /* ---------- Responsive ---------- */

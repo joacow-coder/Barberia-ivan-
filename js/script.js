@@ -6,7 +6,8 @@
   const OPEN_HOUR = 14;
   const CLOSE_HOUR = 20;
   const SLOT_MINUTES = 30;
-  const STORAGE_KEY = 'ivanbeccaria_appointments';
+
+  const client = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
 
   /* ---------------- Header scroll state ---------------- */
   const header = document.getElementById('siteHeader');
@@ -39,7 +40,7 @@
   );
   revealEls.forEach((el) => revealObserver.observe(el));
 
-  /* ---------------- Booking: helpers ---------------- */
+  /* ---------------- Date helpers ---------------- */
   function parseLocalDate(value) {
     const [y, m, d] = value.split('-').map(Number);
     return new Date(y, m - 1, d);
@@ -91,23 +92,136 @@
     return slots;
   }
 
-  function getAppointments() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch {
+  /* ---------------- Supabase data access ---------------- */
+  async function fetchConfiguracion() {
+    if (!client) return null;
+    const { data, error } = await client.from('configuracion').select('*').limit(1).maybeSingle();
+    if (error) {
+      console.error('Error al traer configuración:', error);
+      return null;
+    }
+    return data;
+  }
+
+  async function fetchGaleria() {
+    if (!client) return [];
+    const { data, error } = await client.from('galeria').select('*').order('id', { ascending: true });
+    if (error) {
+      console.error('Error al traer galería:', error);
       return [];
+    }
+    return data || [];
+  }
+
+  async function fetchHorasOcupadas(dateISO) {
+    if (!client) return [];
+    const { data, error } = await client.from('turnos').select('hora').eq('fecha', dateISO);
+    if (error) {
+      console.error('Error al traer turnos:', error);
+      return [];
+    }
+    return (data || []).map((row) => row.hora);
+  }
+
+  async function crearTurno(payload) {
+    if (!client) return { error: { message: 'Supabase no configurado' } };
+    return client.from('turnos').insert([payload]);
+  }
+
+  /* ---------------- Loading / config warning ---------------- */
+  function setPageLoading(isLoading) {
+    const loader = document.getElementById('pageLoader');
+    if (loader) loader.classList.toggle('is-hidden', !isLoading);
+  }
+
+  function showConfigWarning() {
+    const banner = document.getElementById('configWarning');
+    if (banner) banner.hidden = false;
+  }
+
+  /* ---------------- Render: configuración ---------------- */
+  function applyConfiguracion(config) {
+    if (!config) return;
+
+    const subtitleEl = document.querySelector('.hero-subtitle');
+    if (config.descripcion && subtitleEl) {
+      subtitleEl.textContent = config.descripcion;
+    }
+
+    const priceEl = document.getElementById('precioCorte');
+    if (priceEl) {
+      if (config.precio_corte !== null && config.precio_corte !== undefined) {
+        priceEl.textContent = `Corte de pelo — $${config.precio_corte}`;
+        priceEl.hidden = false;
+      } else {
+        priceEl.hidden = true;
+      }
     }
   }
 
-  function saveAppointment(appt) {
-    const appts = getAppointments();
-    appts.push(appt);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appts));
+  /* ---------------- Render: galería ---------------- */
+  function renderGaleria(items) {
+    const galleryGrid = document.getElementById('galleryGrid');
+    if (!galleryGrid) return;
+
+    if (!items.length) {
+      galleryGrid.innerHTML = '<p class="gallery-placeholder">Todavía no hay contenido cargado.</p>';
+      return;
+    }
+
+    galleryGrid.innerHTML = '';
+    items.forEach((item) => {
+      const figure = document.createElement('figure');
+      figure.className = 'gallery-item';
+
+      const media = item.tipo === 'video'
+        ? Object.assign(document.createElement('video'), {
+            src: item.url_archivo,
+            muted: true,
+            controls: true,
+            playsInline: true,
+          })
+        : Object.assign(document.createElement('img'), {
+            src: item.url_archivo,
+            alt: item.titulo || 'Trabajo de Iván Beccaria',
+            loading: 'lazy',
+          });
+
+      figure.appendChild(media);
+
+      if (item.titulo) {
+        const caption = document.createElement('figcaption');
+        caption.textContent = item.titulo;
+        figure.appendChild(caption);
+      }
+
+      galleryGrid.appendChild(figure);
+    });
   }
 
-  function isSlotTaken(dateISO, time) {
-    return getAppointments().some((a) => a.fecha === dateISO && a.hora === time);
+  /* ---------------- Init: configuración + galería ---------------- */
+  async function initContent() {
+    setPageLoading(true);
+
+    if (!client) {
+      showConfigWarning();
+      setPageLoading(false);
+      return;
+    }
+
+    try {
+      const [config, galeria] = await Promise.all([fetchConfiguracion(), fetchGaleria()]);
+      applyConfiguracion(config);
+      renderGaleria(galeria);
+    } catch (err) {
+      console.error(err);
+      showConfigWarning();
+    } finally {
+      setPageLoading(false);
+    }
   }
+
+  initContent();
 
   /* ---------------- Booking: DOM refs ---------------- */
   const form = document.getElementById('bookingForm');
@@ -141,26 +255,26 @@
   }
 
   /* ---------------- Render time slots ---------------- */
-  function renderSlots(dateISO) {
+  async function renderSlots(dateISO) {
     selectedTime = null;
-    slotsContainer.innerHTML = '';
-
-    if (!dateISO) {
-      slotsContainer.innerHTML = '<p class="slots-placeholder">Elegí un día para ver los horarios disponibles.</p>';
-      return;
-    }
 
     const date = parseLocalDate(dateISO);
     const day = date.getDay();
 
     if (!ALLOWED_DAYS.includes(day)) {
-      slotsContainer.innerHTML = '<p class="slots-placeholder">Solo atendemos de martes a viernes. Elegí otra fecha.</p>';
+      slotsContainer.innerHTML = '<p class="slots-placeholder">Solo atendemos de martes a viernes. Elegí otro día.</p>';
       return;
     }
+
+    slotsContainer.innerHTML = '<p class="slots-placeholder">Cargando horarios…</p>';
+
+    const horasOcupadas = new Set(await fetchHorasOcupadas(dateISO));
 
     const slots = buildTimeSlots();
     const isToday = dateISO === todayISO();
     const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+    slotsContainer.innerHTML = '';
 
     slots.forEach((time) => {
       const btn = document.createElement('button');
@@ -171,7 +285,7 @@
       const [h, m] = time.split(':').map(Number);
       const slotMinutes = h * 60 + m;
       const isPast = isToday && slotMinutes <= nowMinutes;
-      const taken = isSlotTaken(dateISO, time);
+      const taken = horasOcupadas.has(time);
 
       if (taken || isPast) {
         btn.disabled = true;
@@ -218,8 +332,7 @@
   [nombreInput, apellidoInput, telefonoInput].forEach((input) => {
     input.addEventListener('input', () => {
       input.classList.remove('is-invalid');
-      const field = input.id;
-      clearError(field);
+      clearError(input.id);
     });
   });
 
@@ -262,10 +375,16 @@
   }
 
   /* ---------------- Submit ---------------- */
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     formStatus.className = 'form-status';
     formStatus.textContent = '';
+
+    if (!client) {
+      formStatus.className = 'form-status error';
+      formStatus.textContent = 'La base de datos no está configurada todavía. Contactá al administrador.';
+      return;
+    }
 
     if (!validateForm()) {
       submitBtn.classList.add('shake');
@@ -273,37 +392,44 @@
       return;
     }
 
-    if (isSlotTaken(fechaInput.value, selectedTime)) {
-      formStatus.className = 'form-status error';
-      formStatus.textContent = 'Ese horario ya fue reservado. Elegí otro.';
-      renderSlots(fechaInput.value);
-      return;
-    }
-
     submitBtn.classList.add('is-loading');
     submitBtn.disabled = true;
 
-    setTimeout(() => {
-      saveAppointment({
-        fecha: fechaInput.value,
-        hora: selectedTime,
-        nombre: nombreInput.value.trim(),
-        apellido: apellidoInput.value.trim(),
-        telefono: telefonoInput.value.trim(),
-        creado: new Date().toISOString(),
-      });
-
+    const horasOcupadas = await fetchHorasOcupadas(fechaInput.value);
+    if (horasOcupadas.includes(selectedTime)) {
       submitBtn.classList.remove('is-loading');
       submitBtn.disabled = false;
+      formStatus.className = 'form-status error';
+      formStatus.textContent = 'Ese horario ya fue reservado. Elegí otro.';
+      await renderSlots(fechaInput.value);
+      return;
+    }
 
-      formStatus.className = 'form-status success';
-      formStatus.textContent = `¡Turno confirmado, ${nombreInput.value.trim()}! Te esperamos el ${fechaInput.value} a las ${selectedTime} hs.`;
+    const { error } = await crearTurno({
+      cliente_nombre: nombreInput.value.trim(),
+      cliente_apellido: apellidoInput.value.trim(),
+      cliente_telefono: telefonoInput.value.trim(),
+      fecha: fechaInput.value,
+      hora: selectedTime,
+    });
 
-      const bookedDate = fechaInput.value;
-      form.reset();
-      fechaInput.value = bookedDate;
-      renderSlots(bookedDate);
-    }, 600);
+    submitBtn.classList.remove('is-loading');
+    submitBtn.disabled = false;
+
+    if (error) {
+      console.error(error);
+      formStatus.className = 'form-status error';
+      formStatus.textContent = 'No se pudo confirmar el turno. Probá de nuevo en unos segundos.';
+      return;
+    }
+
+    formStatus.className = 'form-status success';
+    formStatus.textContent = `¡Turno confirmado, ${nombreInput.value.trim()}! Te esperamos el ${fechaInput.value} a las ${selectedTime} hs.`;
+
+    const bookedDate = fechaInput.value;
+    form.reset();
+    fechaInput.value = bookedDate;
+    await renderSlots(bookedDate);
   });
 
   /* ---------------- Footer year ---------------- */

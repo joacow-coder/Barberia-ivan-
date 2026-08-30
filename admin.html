@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de administración | Iván Beccaria</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+</head>
+<body class="admin-body">
+
+  <header class="site-header is-scrolled">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">IVÁN <span class="brand-accent">BECCARIA</span></a>
+      <nav class="main-nav">
+        <span class="admin-tag">Panel admin</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="container">
+
+      <div class="config-warning" id="configWarning" role="alert" hidden>
+        ⚠️ Supabase no está configurado todavía. Completá <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en <code>js/supabase-config.js</code>.
+      </div>
+
+      <section class="admin-section">
+        <h2 class="section-title">Turnos</h2>
+        <p class="section-subtitle">Turnos reservados, ordenados por fecha y hora.</p>
+        <div id="turnosStatus" class="admin-status"></div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Teléfono</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="turnosBody">
+              <tr><td colspan="5">Cargando turnos…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h2 class="section-title">Configuración del sitio</h2>
+        <p class="section-subtitle">Título, descripción y precio que se muestran en la página principal.</p>
+        <form id="configForm" class="admin-card">
+          <div class="field-group">
+            <label for="cfgTitulo">Título</label>
+            <input type="text" id="cfgTitulo" name="titulo" placeholder="Iván Beccaria" />
+          </div>
+          <div class="field-group">
+            <label for="cfgDescripcion">Descripción</label>
+            <textarea id="cfgDescripcion" name="descripcion" rows="3" placeholder="Cortes con actitud, técnica de barbero y estilo urbano."></textarea>
+          </div>
+          <div class="field-group">
+            <label for="cfgPrecio">Precio del corte ($)</label>
+            <input type="number" id="cfgPrecio" name="precio_corte" min="0" step="1" placeholder="8000" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" id="configSubmitBtn">Guardar cambios</button>
+          <div class="form-status" id="configStatus" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <section class="admin-section">
+        <h2 class="section-title">Galería</h2>
+        <p class="section-subtitle">Agregá fotos o videos de trabajos para mostrar en la página principal.</p>
+
+        <form id="galeriaForm" class="admin-card admin-card--row">
+          <div class="field-group field-group--wide">
+            <label for="galUrl">URL del archivo</label>
+            <input type="url" id="galUrl" name="url_archivo" placeholder="https://..." required />
+          </div>
+          <div class="field-group">
+            <label for="galTipo">Tipo</label>
+            <select id="galTipo" name="tipo">
+              <option value="imagen">Imagen</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="galTitulo">Título (opcional)</label>
+            <input type="text" id="galTitulo" name="titulo" placeholder="Fade clásico" />
+          </div>
+          <button type="submit" class="btn btn-primary" id="galeriaSubmitBtn">Agregar</button>
+          <div class="form-status" id="galeriaStatus" role="status" aria-live="polite"></div>
+        </form>
+
+        <div id="galeriaList" class="admin-gallery-list">
+          <p class="gallery-placeholder">Cargando galería…</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

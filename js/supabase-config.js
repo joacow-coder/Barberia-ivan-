@@ -1,6 +1,6 @@
 /* Configuración de Supabase. Completar con los valores del proyecto en supabase.com. */
-const SUPABASE_URL = '';
-const SUPABASE_ANON_KEY = '';
+const SUPABASE_URL = 'https://ytuqdjhhcissklonkbfz.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_GXuGDvskHIX5JPhxOuXBMQ_MHvrHkum';
 
 const supabaseClient = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)

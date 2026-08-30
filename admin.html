@@ -22,6 +22,7 @@
       <a href="index.html" class="brand">IVÁN <span class="brand-accent">BECCARIA</span></a>
       <nav class="main-nav">
         <span class="admin-tag">Panel admin</span>
+        <button type="button" class="btn btn-sm admin-logout-btn" id="logoutBtn" hidden>Cerrar sesión</button>
       </nav>
     </div>
   </header>
@@ -32,6 +33,27 @@
       <div class="config-warning" id="configWarning" role="alert" hidden>
         ⚠️ Supabase no está configurado todavía. Completá <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en <code>js/supabase-config.js</code>.
       </div>
+
+      <section class="admin-login" id="loginView">
+        <div class="admin-card admin-login-card">
+          <h2 class="section-title">Ingresar</h2>
+          <p class="section-subtitle">Accedé con tu cuenta para gestionar turnos, configuración y galería.</p>
+          <form id="loginForm">
+            <div class="field-group">
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" name="email" placeholder="tu@email.com" required autocomplete="username" />
+            </div>
+            <div class="field-group">
+              <label for="loginPassword">Contraseña</label>
+              <input type="password" id="loginPassword" name="password" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg" id="loginSubmitBtn">Iniciar sesión</button>
+            <div class="form-status" id="loginStatus" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+      </section>
+
+      <div id="adminPanel" hidden>
 
       <section class="admin-section">
         <h2 class="section-title">Turnos</h2>
@@ -104,6 +126,8 @@
           <p class="gallery-placeholder">Cargando galería…</p>
         </div>
       </section>
+
+      </div>
 
     </div>
   </main>

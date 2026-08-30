@@ -94,32 +94,45 @@ const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
 const SUPABASE_ANON_KEY = 'tu-anon-key-publica';
 ```
 
-4. **Seguridad (importante):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de **Row Level Security (RLS)**. Sin RLS, cualquier visitante (o el propio `admin.html`, que no tiene login) puede leer y escribir todas las tablas. Como mínimo:
+4. **Seguridad — Row Level Security (RLS):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de RLS. Con `admin.html` ahora protegido por Supabase Auth (login con email/contraseña), las tablas deben permitir lectura y alta pública, pero limitar modificación y borrado a usuarios logueados:
 
 ```sql
 alter table turnos enable row level security;
 alter table configuracion enable row level security;
 alter table galeria enable row level security;
 
--- Lectura pública (necesaria para el sitio y la galería)
-create policy "lectura publica turnos" on turnos for select using (true);
-create policy "lectura publica configuracion" on configuracion for select using (true);
-create policy "lectura publica galeria" on galeria for select using (true);
+-- SELECT público (el sitio y la galería lo necesitan sin login)
+create policy "select publico turnos" on turnos for select using (true);
+create policy "select publico configuracion" on configuracion for select using (true);
+create policy "select publico galeria" on galeria for select using (true);
 
--- Cualquiera puede reservar un turno (insert), pero no editar/borrar turnos ajenos
-create policy "insertar turno publico" on turnos for insert with check (true);
+-- INSERT público (turnos: para que cualquiera pueda reservar sin cuenta)
+create policy "insert publico turnos" on turnos for insert with check (true);
+create policy "insert publico configuracion" on configuracion for insert with check (true);
+create policy "insert publico galeria" on galeria for insert with check (true);
+
+-- UPDATE / DELETE solo para usuarios autenticados (el admin logueado)
+create policy "update autenticado turnos" on turnos for update using (auth.role() = 'authenticated');
+create policy "delete autenticado turnos" on turnos for delete using (auth.role() = 'authenticated');
+
+create policy "update autenticado configuracion" on configuracion for update using (auth.role() = 'authenticated');
+create policy "delete autenticado configuracion" on configuracion for delete using (auth.role() = 'authenticated');
+
+create policy "update autenticado galeria" on galeria for update using (auth.role() = 'authenticated');
+create policy "delete autenticado galeria" on galeria for delete using (auth.role() = 'authenticated');
 ```
 
-Con esas policies, cualquier visitante puede **crear** turnos (como debe ser) pero **no** puede cancelarlos ni tocar `configuracion`/`galeria` desde la consola del navegador. Eso significa que, tal cual está hoy, **`admin.html` no podrá cancelar turnos, guardar configuración ni gestionar la galería sin agregar autenticación** (Supabase Auth) y políticas que exijan un usuario logueado para esas operaciones. Si querés, se puede sumar un login simple de Supabase Auth para destrabar esto — no se implementó porque no fue parte de este pedido.
+> ⚠️ **Advertencia sobre el INSERT público en `configuracion` y `galeria`:** estas políticas permiten que *cualquiera* con la anon key (visible en el HTML) inserte filas nuevas en esas tablas directamente contra la API de Supabase, sin pasar por `admin.html` ni loguearse — por ejemplo, alguien podría agregar imágenes arbitrarias a la galería o crear configuraciones falsas con un simple `curl`. Se implementó así porque fue lo pedido explícitamente. Si querés cerrar ese hueco, la alternativa es exigir `auth.role() = 'authenticated'` también en el `insert` de `configuracion` y `galeria` (dejando el insert público solo en `turnos`, que sí necesita aceptar reservas anónimas) — avisame si querés que lo cambie.
+
+5. Creá el usuario admin en **Authentication → Users → Add user** (email + contraseña) para poder loguearte en `admin.html`. No hay registro público: los usuarios se crean a mano desde el dashboard de Supabase.
 
 ## Panel de administración (`admin.html`)
 
+- **Login con Supabase Auth** (email + contraseña, `supabase.auth.signInWithPassword`). Mientras no haya sesión activa, el panel permanece oculto y solo se ve el formulario de login. Botón "Cerrar sesión" (`supabase.auth.signOut`) visible una vez logueado.
 - Lista los turnos reales desde Supabase, con botón para cancelarlos (`delete`).
 - Formulario para editar `configuracion` (título, descripción, precio del corte) — hace `upsert`.
 - Formulario para agregar contenido a `galeria` (URL, tipo, título) y eliminarlo.
-- **No tiene login.** Es una página estática más del sitio; cualquiera con la URL puede abrirla. Sumale al menos una de estas capas antes de usarlo en producción:
-  - Supabase Auth (email/password o magic link) + políticas RLS que exijan `auth.uid()`.
-  - Restringir el acceso a `/admin.html` a nivel de hosting (ej. Basic Auth en Netlify/Vercel).
+- La protección real no es la pantalla de login en sí (es solo UI) sino las políticas RLS de arriba: sin `auth.role() = 'authenticated'` en `update`/`delete`, cualquiera podría cancelar turnos o borrar la galería llamando a la API directamente aunque nunca haya visto `admin.html`.
 
 ## Despliegue
 

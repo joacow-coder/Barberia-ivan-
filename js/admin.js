@@ -6,6 +6,84 @@
   const configWarning = document.getElementById('configWarning');
   if (!client && configWarning) configWarning.hidden = false;
 
+  /* ---------------- Auth ---------------- */
+  const loginView = document.getElementById('loginView');
+  const adminPanel = document.getElementById('adminPanel');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const loginForm = document.getElementById('loginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginStatus = document.getElementById('loginStatus');
+  const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
+  function showPanel(isAuthenticated) {
+    if (loginView) loginView.hidden = isAuthenticated;
+    if (adminPanel) adminPanel.hidden = !isAuthenticated;
+    if (logoutBtn) logoutBtn.hidden = !isAuthenticated;
+  }
+
+  async function handleSession(session) {
+    const isAuthenticated = !!session;
+    showPanel(isAuthenticated);
+
+    if (isAuthenticated) {
+      await Promise.all([loadTurnos(), loadConfiguracion(), loadGaleria()]);
+    }
+  }
+
+  async function initAuth() {
+    if (!client) {
+      showPanel(false);
+      return;
+    }
+
+    const { data, error } = await client.auth.getSession();
+    if (error) console.error(error);
+    await handleSession(data ? data.session : null);
+
+    client.auth.onAuthStateChange((_event, session) => {
+      handleSession(session);
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!client) {
+        loginStatus.className = 'form-status error';
+        loginStatus.textContent = 'Supabase no está configurado.';
+        return;
+      }
+
+      loginSubmitBtn.disabled = true;
+      loginStatus.className = 'form-status';
+      loginStatus.textContent = '';
+
+      const { error } = await client.auth.signInWithPassword({
+        email: loginEmail.value.trim(),
+        password: loginPassword.value,
+      });
+
+      loginSubmitBtn.disabled = false;
+
+      if (error) {
+        loginStatus.className = 'form-status error';
+        loginStatus.textContent = 'Email o contraseña incorrectos.';
+        return;
+      }
+
+      loginForm.reset();
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      if (!client) return;
+      await client.auth.signOut();
+    });
+  }
+
   function formatFecha(dateISO) {
     const [y, m, d] = dateISO.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
@@ -281,7 +359,5 @@
   }
 
   /* ---------------- Init ---------------- */
-  loadTurnos();
-  loadConfiguracion();
-  loadGaleria();
+  initAuth();
 })();

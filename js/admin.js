@@ -237,8 +237,7 @@
 
   /* ---------------- Galería ---------------- */
   const galeriaForm = document.getElementById('galeriaForm');
-  const galUrl = document.getElementById('galUrl');
-  const galTipo = document.getElementById('galTipo');
+  const galeriaFileInput = document.getElementById('galeria-file');
   const galTitulo = document.getElementById('galTitulo');
   const galeriaStatus = document.getElementById('galeriaStatus');
   const galeriaSubmitBtn = document.getElementById('galeriaSubmitBtn');
@@ -317,29 +316,41 @@
   galeriaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!client) return;
-    if (!galUrl.value.trim()) return;
 
-    galeriaSubmitBtn.disabled = true;
-    galeriaStatus.textContent = '';
-
-    const { error } = await client.from('galeria').insert([{
-      url_archivo: galUrl.value.trim(),
-      tipo: galTipo.value,
-      titulo: galTitulo.value.trim(),
-    }]);
-
-    galeriaSubmitBtn.disabled = false;
-
-    if (error) {
-      console.error(error);
-      galeriaStatus.textContent = 'No se pudo agregar el contenido.';
+    const file = galeriaFileInput.files[0];
+    if (!file) {
+      galeriaStatus.className = 'form-status error';
+      galeriaStatus.textContent = 'Elegí una foto o video para subir.';
       return;
     }
 
-    galeriaStatus.textContent = 'Contenido agregado.';
-    galeriaForm.reset();
-    galTipo.value = 'imagen';
-    await loadGaleria();
+    galeriaSubmitBtn.disabled = true;
+    galeriaStatus.className = 'form-status';
+    galeriaStatus.textContent = 'Subiendo archivo a la nube…';
+
+    try {
+      const tipo = file.type.startsWith('video/') ? 'video' : 'imagen';
+      const url = await subirArchivo(file, 'galeria');
+
+      const { error } = await client.from('galeria').insert([{
+        url_archivo: url,
+        tipo,
+        titulo: galTitulo.value.trim(),
+      }]);
+
+      if (error) throw error;
+
+      galeriaStatus.className = 'form-status success';
+      galeriaStatus.textContent = 'Contenido agregado.';
+      galeriaForm.reset();
+      await loadGaleria();
+    } catch (err) {
+      console.error(err);
+      galeriaStatus.className = 'form-status error';
+      galeriaStatus.textContent = 'No se pudo subir el archivo.';
+    } finally {
+      galeriaSubmitBtn.disabled = false;
+    }
   });
 
   async function eliminarGaleria(id, btn) {
@@ -361,8 +372,8 @@
 
   /* ---------------- Antes y Después ---------------- */
   const baForm = document.getElementById('baForm');
-  const baAntesInput = document.getElementById('baAntes');
-  const baDespuesInput = document.getElementById('baDespues');
+  const baAntesInput = document.getElementById('antes-file');
+  const baDespuesInput = document.getElementById('despues-file');
   const baTitulo = document.getElementById('baTitulo');
   const baStatus = document.getElementById('baStatus');
   const baSubmitBtn = document.getElementById('baSubmitBtn');
@@ -376,9 +387,9 @@
     baList.appendChild(p);
   }
 
-  async function subirImagen(file, prefix) {
+  async function subirArchivo(file, carpeta) {
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `antes-despues/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `${carpeta}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
     const { error } = await client.storage.from(STORAGE_BUCKET).upload(path, file, {
       cacheControl: '3600',
@@ -457,12 +468,12 @@
 
       baSubmitBtn.disabled = true;
       baStatus.className = 'form-status';
-      baStatus.textContent = 'Subiendo imágenes…';
+      baStatus.textContent = 'Subiendo archivos a la nube…';
 
       try {
         const [urlAntes, urlDespues] = await Promise.all([
-          subirImagen(antesFile, 'antes'),
-          subirImagen(despuesFile, 'despues'),
+          subirArchivo(antesFile, 'antes-despues/antes'),
+          subirArchivo(despuesFile, 'antes-despues/despues'),
         ]);
 
         const { error } = await client.from('antes_despues').insert([{

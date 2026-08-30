@@ -100,15 +100,8 @@
 
         <form id="galeriaForm" class="admin-card admin-card--row">
           <div class="field-group field-group--wide">
-            <label for="galUrl">URL del archivo</label>
-            <input type="url" id="galUrl" name="url_archivo" placeholder="https://..." required />
-          </div>
-          <div class="field-group">
-            <label for="galTipo">Tipo</label>
-            <select id="galTipo" name="tipo">
-              <option value="imagen">Imagen</option>
-              <option value="video">Video</option>
-            </select>
+            <label for="galeria-file">Foto o video</label>
+            <input type="file" id="galeria-file" name="archivo" accept="image/*,video/*" required />
           </div>
           <div class="field-group">
             <label for="galTitulo">Título (opcional)</label>
@@ -129,12 +122,12 @@
 
         <form id="baForm" class="admin-card">
           <div class="field-group">
-            <label for="baAntes">Foto "Antes"</label>
-            <input type="file" id="baAntes" name="antes" accept="image/*" required />
+            <label for="antes-file">Foto "Antes"</label>
+            <input type="file" id="antes-file" name="antes" accept="image/*" required />
           </div>
           <div class="field-group">
-            <label for="baDespues">Foto "Después"</label>
-            <input type="file" id="baDespues" name="despues" accept="image/*" required />
+            <label for="despues-file">Foto "Después"</label>
+            <input type="file" id="despues-file" name="despues" accept="image/*" required />
           </div>
           <div class="field-group">
             <label for="baTitulo">Título / descripción</label>

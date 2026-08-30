@@ -94,35 +94,39 @@ const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
 const SUPABASE_ANON_KEY = 'tu-anon-key-publica';
 ```
 
-4. **Seguridad — Row Level Security (RLS):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de RLS. Con `admin.html` ahora protegido por Supabase Auth (login con email/contraseña), las tablas deben permitir lectura y alta pública, pero limitar modificación y borrado a usuarios logueados:
+4. **Seguridad — Row Level Security (RLS):** la clave `anon` es pública por diseño en Supabase — cualquiera que inspeccione el sitio puede verla. La protección real la dan las políticas de RLS. Con `admin.html` protegido por Supabase Auth (login con email/contraseña):
+   - `turnos` permite SELECT e INSERT públicos (los clientes reservan sin cuenta), pero UPDATE/DELETE solo para usuarios autenticados.
+   - `configuracion` y `galeria` solo permiten SELECT público; INSERT, UPDATE y DELETE quedan restringidos a usuarios autenticados, ya que esos cambios los hace únicamente el admin logueado desde `admin.html`.
 
 ```sql
 alter table turnos enable row level security;
 alter table configuracion enable row level security;
 alter table galeria enable row level security;
 
--- SELECT público (el sitio y la galería lo necesitan sin login)
+-- SELECT público en las tres tablas (el sitio y la galería lo necesitan sin login)
 create policy "select publico turnos" on turnos for select using (true);
 create policy "select publico configuracion" on configuracion for select using (true);
 create policy "select publico galeria" on galeria for select using (true);
 
--- INSERT público (turnos: para que cualquiera pueda reservar sin cuenta)
+-- INSERT público solo en turnos (para que cualquiera pueda reservar sin cuenta)
 create policy "insert publico turnos" on turnos for insert with check (true);
-create policy "insert publico configuracion" on configuracion for insert with check (true);
-create policy "insert publico galeria" on galeria for insert with check (true);
 
--- UPDATE / DELETE solo para usuarios autenticados (el admin logueado)
+-- turnos: UPDATE / DELETE solo para usuarios autenticados
 create policy "update autenticado turnos" on turnos for update using (auth.role() = 'authenticated');
 create policy "delete autenticado turnos" on turnos for delete using (auth.role() = 'authenticated');
 
+-- configuracion: INSERT / UPDATE / DELETE solo para usuarios autenticados
+create policy "insert autenticado configuracion" on configuracion for insert with check (auth.role() = 'authenticated');
 create policy "update autenticado configuracion" on configuracion for update using (auth.role() = 'authenticated');
 create policy "delete autenticado configuracion" on configuracion for delete using (auth.role() = 'authenticated');
 
+-- galeria: INSERT / UPDATE / DELETE solo para usuarios autenticados
+create policy "insert autenticado galeria" on galeria for insert with check (auth.role() = 'authenticated');
 create policy "update autenticado galeria" on galeria for update using (auth.role() = 'authenticated');
 create policy "delete autenticado galeria" on galeria for delete using (auth.role() = 'authenticated');
 ```
 
-> ⚠️ **Advertencia sobre el INSERT público en `configuracion` y `galeria`:** estas políticas permiten que *cualquiera* con la anon key (visible en el HTML) inserte filas nuevas en esas tablas directamente contra la API de Supabase, sin pasar por `admin.html` ni loguearse — por ejemplo, alguien podría agregar imágenes arbitrarias a la galería o crear configuraciones falsas con un simple `curl`. Se implementó así porque fue lo pedido explícitamente. Si querés cerrar ese hueco, la alternativa es exigir `auth.role() = 'authenticated'` también en el `insert` de `configuracion` y `galeria` (dejando el insert público solo en `turnos`, que sí necesita aceptar reservas anónimas) — avisame si querés que lo cambie.
+Con esto, nadie puede insertar, editar ni borrar filas de `configuracion` o `galeria` sin estar logueado — ni siquiera llamando a la API de Supabase directamente con la anon key. Esas acciones solo van a funcionar desde `admin.html` con una sesión activa.
 
 5. Creá el usuario admin en **Authentication → Users → Add user** (email + contraseña) para poder loguearte en `admin.html`. No hay registro público: los usuarios se crean a mano desde el dashboard de Supabase.
 
